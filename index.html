@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agenda IASD</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary: #0f172a; /* Azul Marinho Profundo */
+            --gold: #c5a059;    /* Dourado Nobre */
+            --light: #f8fafc;   /* Branco Gelo */
+            --bg: #e2e8f0;      /* Cinza Claro Fundo */
+            --text-dark: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-dark);
+        }
+
+        /* --- Header Luxury --- */
+        header {
+            background: var(--primary);
+            color: var(--gold);
+            padding: 2rem 1rem;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Botão Admin Discreto */
+        .admin-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            border: 1px solid var(--gold);
+            color: var(--gold);
+            padding: 5px 15px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: 0.3s;
+        }
+
+        .admin-btn:hover {
+            background: var(--gold);
+            color: var(--primary);
+        }
+
+        /* --- Container da Agenda --- */
+        .container {
+            max-width: 800px;
+            margin: -30px auto 50px;
+            padding: 0 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* --- Loading --- */
+        #loading {
+            text-align: center;
+            padding: 50px;
+            color: var(--primary);
+            font-size: 1.2rem;
+        }
+
+        /* --- Cards de Eventos --- */
+        .event-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--gold);
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            position: relative;
+        }
+
+        .event-card:hover {
+            transform: translateY(-3px);
+        }
+
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 5px;
+        }
+
+        .date-badge {
+            background: var(--primary);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            text-align: center;
+            min-width: 80px;
+        }
+
+        .date-badge span {
+            display: block;
+            font-size: 0.7rem;
+            opacity: 0.8;
+            font-weight: normal;
+        }
+
+        .event-time {
+            color: var(--text-dark);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .event-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+
+        .event-dept {
+            background: #f1f5f9;
+            color: #64748b;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+            align-self: flex-start;
+        }
+
+        .event-desc {
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .delete-btn {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none; /* Oculto por padrão */
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- Modal Admin --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            border-top: 5px solid var(--gold);
+        }
+
+        .modal h2 {
+            font-family: 'Playfair Display', serif;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .form-group { margin-bottom: 15px; text-align: left; }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: 'Lato', sans-serif;
+            margin-top: 5px;
+        }
+
+        button.action-btn {
+            background: var(--primary);
+            color: var(--gold);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            width: 100%;
+            transition: 0.3s;
+        }
+
+        button.action-btn:hover { background: #1e293b; }
+        
+        .close-modal {
+            margin-top: 10px;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <button class="admin-btn" onclick="openLogin()">Área de Líderes</button>
+        <h1>Agenda IASD</h1>
+        <p>Igreja Adventista do Sétimo Dia</p>
+    </header>
+
+    <div class="container" id="agenda-container">
+        <div id="loading"><i class="fas fa-spinner fa-spin"></i> Carregando eventos...</div>
+        </div>
+
+    <div id="modal-login" class="modal">
+        <div class="modal-content">
+            <h2>Acesso Restrito</h2>
+            <div class="form-group">
+                <input type="password" id="login-pass" placeholder="Senha da Liderança">
+            </div>
+            <button class="action-btn" onclick="verificarLogin()">Entrar</button>
+            <button class="close-modal" onclick="fecharModais()">Cancelar</button>
+        </div>
+    </div>
+
+    <div id="modal-add" class="modal">
+        <div class="modal-content">
+            <h2>Novo Evento</h2>
+            <div class="form-group">
+                <label>Título</label>
+                <input type="text" id="evt-titulo" placeholder="Ex: Comissão">
+            </div>
+            <div class="form-group">
+                <label>Data</label>
+                <input type="date" id="evt-data">
+            </div>
+            <div class="form-group">
+                <label>Hora</label>
+                <input type="time" id="evt-hora">
+            </div>
+            <div class="form-group">
+                <label>Departamento</label>
+                <select id="evt-depto">
+                    <option>Geral</option>
+                    <option>Jovens</option>
+                    <option>Desbravadores</option>
+                    <option>Administrativa</option>
+                    <option>Música</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Descrição</label>
+                <textarea id="evt-desc" rows="3"></textarea>
+            </div>
+            <button class="action-btn" onclick="salvarEvento()">Salvar na Agenda</button>
+            <button class="close-modal" onclick="fecharModais()">Fechar</button>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURAÇÃO ---
+        const API_URL = "https://script.google.com/macros/s/AKfycbzKASrGdYHZi2ZJdiZ1XORuJqjUU83BElXa5WfHivjO7z0NgyMssEO4pvv3-9FmIb-v/exec"; // <<<< IMPORTANTE: COLE AQUI
+        let isAdmin = false;
+        let adminPass = "";
+
+        // --- INICIALIZAÇÃO ---
+        window.onload = carregarEventos;
+
+        // --- FUNÇÕES DE LEITURA ---
+        async function carregarEventos() {
+            const container = document.getElementById('agenda-container');
+            container.innerHTML = '<div id="loading"><i class="fas fa-spinner fa-spin"></i> Atualizando agenda...</div>';
+            
+            // Botão de Adicionar aparece se for admin
+            if(isAdmin) {
+                container.innerHTML = `<button class="action-btn" style="margin-bottom:20px" onclick="abrirAdd()">+ Adicionar Evento</button>`;
+            } else {
+                container.innerHTML = '';
+            }
+
+            try {
+                // Adiciona timestamp para evitar cache do navegador
+                const response = await fetch(`${API_URL}?action=read&t=${new Date().getTime()}`);
+                const json = await response.json();
+
+                if (json.data.length === 0) {
+                    container.innerHTML += '<div style="text-align:center; padding:20px;">Nenhum evento futuro agendado.</div>';
+                    return;
+                }
+
+                json.data.forEach(evt => {
+                    const dataObj = new Date(evt.data);
+                    // Ajuste de fuso horário simples (considerando que vem ISO)
+                    const dia = dataObj.getUTCDate();
+                    const mes = dataObj.toLocaleString('pt-BR', { month: 'short', timeZone: 'UTC' }).toUpperCase();
+                    
+                    const card = document.createElement('div');
+                    card.className = 'event-card';
+                    card.innerHTML = `
+                        <div class="event-header">
+                            <div class="date-badge">${dia} <span>${mes}</span></div>
+                            <div class="event-time"><i class="far fa-clock"></i> ${evt.hora}</div>
+                        </div>
+                        <span class="event-dept">${evt.depto}</span>
+                        <h3 class="event-title">${evt.titulo}</h3>
+                        <p class="event-desc">${evt.descricao}</p>
+                        ${isAdmin ? `<button class="delete-btn" onclick="deletarEvento('${evt.id}')" style="display:flex"><i class="fas fa-trash"></i></button>` : ''}
+                    `;
+                    container.appendChild(card);
+                });
+
+            } catch (error) {
+                container.innerHTML = `<p style="color:red; text-align:center">Erro ao carregar: ${error.message}</p>`;
+            }
+        }
+
+        // --- FUNÇÕES DE ADMINISTRAÇÃO ---
+        function openLogin() {
+            document.getElementById('modal-login').style.display = 'flex';
+        }
+
+        function fecharModais() {
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        }
+
+        function verificarLogin() {
+            const pass = document.getElementById('login-pass').value;
+            // Validação simples no front (a segurança real está no backend GAS)
+            if(pass) {
+                isAdmin = true;
+                adminPass = pass;
+                fecharModais();
+                alert("Modo Líder Ativado!");
+                carregarEventos(); // Recarrega para mostrar botões de excluir/adicionar
+            }
+        }
+
+        function abrirAdd() {
+            document.getElementById('modal-add').style.display = 'flex';
+        }
+
+        async function salvarEvento() {
+            const btn = document.querySelector('#modal-add .action-btn');
+            const originalText = btn.innerText;
+            btn.innerText = "Salvando...";
+            btn.disabled = true;
+
+            const dados = {
+                senha: adminPass,
+                titulo: document.getElementById('evt-titulo').value,
+                data: document.getElementById('evt-data').value,
+                hora: document.getElementById('evt-hora').value,
+                depto: document.getElementById('evt-depto').value,
+                descricao: document.getElementById('evt-desc').value
+            };
+
+            try {
+                await fetch(API_URL + "?action=create", {
+                    method: 'POST',
+                    body: JSON.stringify(dados)
+                });
+                alert("Evento adicionado com sucesso!");
+                fecharModais();
+                carregarEventos();
+            } catch (e) {
+                alert("Erro ao salvar: " + e);
+            } finally {
+                btn.innerText = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        async function deletarEvento(id) {
+            if(!confirm("Tem certeza que deseja apagar este evento?")) return;
+
+            try {
+                await fetch(API_URL + "?action=delete", {
+                    method: 'POST',
+                    body: JSON.stringify({ senha: adminPass, id: id })
+                });
+                alert("Evento removido.");
+                carregarEventos();
+            } catch (e) {
+                alert("Erro ao excluir: " + e);
+            }
+        }
+    </script>
+</body>
+</html>
