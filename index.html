@@ -6,10 +6,10 @@
     <title>Agenda INOCOOP</title>
     <style>
         :root {
-            --bg-color: #0A1128; /* Azul marinho muito escuro e luxuoso */
+            --bg-color: #0A1128;
             --card-bg: #16203A;
             --text-main: #F3F4F6;
-            --gold: #D4AF37; /* Dourado elegante */
+            --gold: #D4AF37;
             --gold-hover: #F3D573;
         }
 
@@ -82,6 +82,7 @@
             border-radius: 8px;
             aspect-ratio: 1;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             font-size: 1.1rem;
@@ -95,25 +96,72 @@
             border-color: var(--gold);
         }
 
-        .day.has-event {
-            color: var(--gold);
-            font-weight: bold;
-        }
-
-        .day.has-event::after {
-            content: '';
-            position: absolute;
-            bottom: 10%;
-            width: 6px;
-            height: 6px;
-            background-color: var(--gold);
-            border-radius: 50%;
-        }
-
         .day.empty {
             background-color: transparent;
             cursor: default;
         }
+
+        /* Container para as múltiplas bolinhas */
+        .dots-container {
+            position: absolute;
+            bottom: 5px;
+            display: flex;
+            gap: 3px;
+            justify-content: center;
+            width: 100%;
+            flex-wrap: wrap;
+            padding: 0 4px;
+            box-sizing: border-box;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+        }
+
+        /* Seção da Lista Mensal */
+        .monthly-list-container {
+            width: 100%;
+            max-width: 600px;
+            margin-top: 40px;
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 15px;
+            box-sizing: border-box;
+        }
+
+        .monthly-list-container h3 {
+            color: var(--gold);
+            text-align: center;
+            border-bottom: 1px solid #2A3B61;
+            padding-bottom: 15px;
+            margin-top: 0;
+            font-weight: 400;
+        }
+
+        /* Estilos dos Eventos (Usado no Modal e na Lista Mensal) */
+        .event-item {
+            background-color: rgba(255,255,255,0.05);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            /* A borda esquerda será injetada via JavaScript dependendo da cor */
+            border-left: 4px solid var(--gold); 
+        }
+
+        .event-time { font-size: 0.9rem; color: #8892B0; margin-bottom: 5px;}
+        .event-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 5px;}
+        .event-cat { 
+            font-size: 0.8rem; 
+            color: #fff; /* Texto branco para dar contraste */
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5); /* Sombra leve para garantir leitura */
+            padding: 2px 8px; 
+            border-radius: 10px; 
+            display: inline-block; 
+            margin-bottom: 5px;
+        }
+        .event-loc { font-size: 0.9rem; color: #CBD5E1; }
 
         /* Modal / Bottom Sheet */
         .modal-overlay {
@@ -157,19 +205,6 @@
             background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer; padding: 0;
         }
 
-        .event-item {
-            background-color: rgba(255,255,255,0.05);
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            border-left: 4px solid var(--gold);
-        }
-
-        .event-time { font-size: 0.9rem; color: #8892B0; margin-bottom: 5px;}
-        .event-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 5px;}
-        .event-cat { font-size: 0.8rem; background: var(--gold); color: var(--bg-color); padding: 2px 8px; border-radius: 10px; display: inline-block; margin-bottom: 5px;}
-        .event-loc { font-size: 0.9rem; color: #CBD5E1; }
-
     </style>
 </head>
 <body>
@@ -186,7 +221,13 @@
     <div class="calendar" id="calendarGrid">
         <div class="day-name">DOM</div><div class="day-name">SEG</div><div class="day-name">TER</div>
         <div class="day-name">QUA</div><div class="day-name">QUI</div><div class="day-name">SEX</div><div class="day-name">SÁB</div>
-        </div>
+    </div>
+
+    <div class="monthly-list-container">
+        <h3>Eventos deste Mês</h3>
+        <div id="monthlyList">
+            </div>
+    </div>
 
     <div class="modal-overlay" id="modalOverlay" onclick="closeModal()"></div>
     <div class="modal-content" id="modalContent">
@@ -198,13 +239,29 @@
     </div>
 
     <script>
-        // === ATENÇÃO: COLE O LINK DA SUA PLANILHA AQUI DENTRO DAS ASPAS ===
         const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQSHSgBxTE5-quyTIjj1SxVTlGT4rdmJNUDKP2YO2H61aoNLQ4Ab8r0f_QIJsazFpdH6CdDVUmM5RkU/pub?gid=0&single=true&output=csv';
 
-        let eventsData = [];
-        let currentDate = new Date(2026, 1, 1); // Começando em Fev/2026 como base nos seus dados
+        // === DICIONÁRIO DE CORES ===
+        // Para adicionar mais cores, basta colocar o nome da categoria (tudo em minúsculo) e a cor na frente.
+        const coresCategorias = {
+            'geral': '#D4AF37',                // Amarelo Dourado
+            'ministério da mulher': '#FF69B4', // Rosa
+            'ministério jovem': '#4169E1',     // Azul
+            'desbravadores': '#FF8C00',        // Laranja
+            'ministério da saúde': '#32CD32',  // Verde
+            // Adicione outras abaixo, ex: 'coral': '#9370DB'
+        };
 
-        // Função para buscar e ler a planilha
+        // Função para pegar a cor da categoria (Se não achar, usa cinza claro)
+        function getCorCategoria(categoria) {
+            if (!categoria) return '#8892B0'; // Cor padrão sem categoria
+            const catMinuscula = categoria.toLowerCase().trim();
+            return coresCategorias[catMinuscula] || '#8892B0'; 
+        }
+
+        let eventsData = [];
+        let currentDate = new Date(); // Agora inicia sempre no mês atual do celular/pc do usuário
+
         async function fetchEvents() {
             try {
                 const response = await fetch(csvUrl);
@@ -213,7 +270,6 @@
                 renderCalendar();
             } catch (error) {
                 console.error('Erro ao carregar a agenda:', error);
-                // Se der erro (ou enquanto você não coloca o link), a agenda carrega vazia mas não quebra.
                 renderCalendar(); 
             }
         }
@@ -222,9 +278,7 @@
             const rows = text.split('\n');
             eventsData = [];
             
-            // Pula a primeira linha (cabeçalho) e lê o resto
             for(let i = 1; i < rows.length; i++) {
-                // Divide por vírgula (evite usar vírgulas nos textos da sua planilha para não quebrar a formatação)
                 const cols = rows[i].split(','); 
                 if(cols.length >= 4 && cols[0].trim() !== '') {
                     eventsData.push({
@@ -250,24 +304,55 @@
             const daysInMonth = new Date(year, month + 1, 0).getDate();
             
             const grid = document.getElementById('calendarGrid');
-            // Mantém os nomes da semana e limpa os dias numéricos
             grid.innerHTML = '<div class="day-name">DOM</div><div class="day-name">SEG</div><div class="day-name">TER</div><div class="day-name">QUA</div><div class="day-name">QUI</div><div class="day-name">SEX</div><div class="day-name">SÁB</div>';
 
-            // Preenche os espaços vazios antes do dia 1
             for (let i = 0; i < firstDay; i++) {
                 grid.innerHTML += `<div class="day empty"></div>`;
             }
 
-            // Preenche os dias do mês
+            let monthlyEventsHtml = ''; // Guarda o HTML da lista mensal
+            let countMensais = 0;
+
             for (let i = 1; i <= daysInMonth; i++) {
-                // Formata a data para comparar com a planilha (DD/MM/AAAA)
                 const dateString = `${String(i).padStart(2, '0')}/${String(month + 1).padStart(2, '0')}/${year}`;
                 
-                // Verifica se tem evento neste dia
+                // Filtra eventos do dia
                 const dayEvents = eventsData.filter(e => e.data === dateString);
-                const hasEventClass = dayEvents.length > 0 ? 'has-event' : '';
+                
+                let dotsHtml = '';
+                if (dayEvents.length > 0) {
+                    // Pega as cores únicas das categorias do dia para gerar as bolinhas
+                    const coresUnicas = [...new Set(dayEvents.map(e => getCorCategoria(e.categoria)))];
+                    
+                    dotsHtml = `<div class="dots-container">`;
+                    coresUnicas.forEach(cor => {
+                        dotsHtml += `<div class="dot" style="background-color: ${cor}"></div>`;
+                    });
+                    dotsHtml += `</div>`;
 
-                grid.innerHTML += `<div class="day ${hasEventClass}" onclick="openModal('${dateString}')">${i}</div>`;
+                    // Prepara a lista mensal
+                    dayEvents.forEach(ev => {
+                        countMensais++;
+                        monthlyEventsHtml += createEventHtml(ev, `${dateString} - `);
+                    });
+                }
+
+                // Cria o quadrado do dia no calendário
+                const hasEventStyle = dayEvents.length > 0 ? 'font-weight: bold; color: white;' : '';
+                grid.innerHTML += `
+                    <div class="day" style="${hasEventStyle}" onclick="openModal('${dateString}')">
+                        ${i}
+                        ${dotsHtml}
+                    </div>
+                `;
+            }
+
+            // Atualiza a seção da Lista Mensal
+            const monthlyListContainer = document.getElementById('monthlyList');
+            if (countMensais === 0) {
+                monthlyListContainer.innerHTML = '<p style="text-align: center; color: #8892B0;">Nenhum evento registrado para este mês.</p>';
+            } else {
+                monthlyListContainer.innerHTML = monthlyEventsHtml;
             }
         }
 
@@ -276,32 +361,38 @@
             renderCalendar();
         }
 
+        // Função auxiliar para gerar o HTML de um evento (Usado no Modal e na Lista Mensal)
+        function createEventHtml(ev, prefixData = '') {
+            let timeText = ev.inicio;
+            if(ev.fim) timeText += ` às ${ev.fim}`;
+            
+            const cor = getCorCategoria(ev.categoria);
+
+            return `
+                <div class="event-item" style="border-left-color: ${cor};">
+                    ${ev.categoria ? `<div class="event-cat" style="background-color: ${cor};">${ev.categoria}</div>` : ''}
+                    <div class="event-title">${prefixData}${ev.titulo}</div>
+                    ${timeText ? `<div class="event-time">🕒 ${timeText}</div>` : ''}
+                    ${ev.local ? `<div class="event-loc">📍 ${ev.local}</div>` : ''}
+                </div>
+            `;
+        }
+
         function openModal(dateString) {
             const dayEvents = eventsData.filter(e => e.data === dateString);
             
-            if(dayEvents.length === 0) return; // Não abre se não tiver evento
+            if(dayEvents.length === 0) return;
 
             document.getElementById('modalDateTitle').innerText = `Agenda: ${dateString}`;
             
             let html = '';
             dayEvents.forEach(ev => {
-                let timeText = ev.inicio;
-                if(ev.fim) timeText += ` às ${ev.fim}`;
-                
-                html += `
-                    <div class="event-item">
-                        ${ev.categoria ? `<div class="event-cat">${ev.categoria}</div>` : ''}
-                        <div class="event-title">${ev.titulo}</div>
-                        ${timeText ? `<div class="event-time">🕒 ${timeText}</div>` : ''}
-                        ${ev.local ? `<div class="event-loc">📍 ${ev.local}</div>` : ''}
-                    </div>
-                `;
+                html += createEventHtml(ev);
             });
 
             document.getElementById('eventList').innerHTML = html;
             document.getElementById('modalOverlay').style.display = 'block';
             
-            // Pequeno delay para a animação do CSS funcionar
             setTimeout(() => {
                 document.getElementById('modalContent').classList.add('show');
             }, 10);
@@ -311,10 +402,9 @@
             document.getElementById('modalContent').classList.remove('show');
             setTimeout(() => {
                 document.getElementById('modalOverlay').style.display = 'none';
-            }, 300); // Tempo da animação
+            }, 300);
         }
 
-        // Inicia buscando os dados
         fetchEvents();
     </script>
 </body>
